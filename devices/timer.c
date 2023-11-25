@@ -87,7 +87,8 @@ timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
-/* Suspends execution for approximately TICKS timer ticks. */
+/* Suspends execution for approximately TICKS timer ticks. 
+약 TICKS개의 타이머 틱 동안 실행을 일시 중지합니다. */
 void
 timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();

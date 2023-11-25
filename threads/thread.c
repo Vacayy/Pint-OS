@@ -524,9 +524,12 @@ thread_launch (struct thread *th) {
 }
 
 /* Schedules a new process. At entry, interrupts must be off.
- * This function modify current thread's status to status and then
- * finds another thread to run and switches to it.
- * It's not safe to call printf() in the schedule(). */
+ 새로운 프로세스를 예약합니다. 진입 시 인터럽트는 꺼져 있어야 합니다.
+ This function modify current thread's status to status and then finds another thread to run and switches to it.
+ 이 함수는 현재 스레드의 상태를 상태(?)로 수정한 후 실행할 다른 스레드를 찾아 해당 스레드로 전환합니다.
+ It's not safe to call printf() in the schedule(). 
+ Schedule()에서 printf()를 호출하는 것은 안전하지 않습니다.
+*/
 static void
 do_schedule(int status) {
 	ASSERT (intr_get_level () == INTR_OFF);
