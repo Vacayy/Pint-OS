@@ -245,6 +245,11 @@ thread_unblock (struct thread *t) {
 	intr_set_level (old_level);
 }
 
+//////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+
 /* Returns the name of the running thread. */
 const char *
 thread_name (void) {
