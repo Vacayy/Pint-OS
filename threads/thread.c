@@ -79,19 +79,20 @@ static tid_t allocate_tid (void);
 // setup temporal gdt first.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
-/* Initializes the threading system by transforming the code
-   that's currently running into a thread.  This can't work in
-   general and it is possible in this case only because loader.S
-   was careful to put the bottom of the stack at a page boundary.
+/* Initializes the threading system by transforming the code that's currently running into a thread.  
+/* 현재 실행 중인 코드를 스레드로 변환하여 스레딩 시스템을 초기화합니다.  
+   This can't work in general and it is possible in this case only because loader.S was careful to put the bottom of the stack at a page boundary.
+   이것은 일반적으로 작동하지 않으며 이 경우에만 가능합니다. 왜냐하면 loader.S가 스택의 맨 아래를 페이지 경계에 두는 데 주의를 기울였기 때문입니다.
 
    Also initializes the run queue and the tid lock.
+   또한 실행 큐와 tid 잠금을 초기화합니다.
 
-   After calling this function, be sure to initialize the page
-   allocator before trying to create any threads with
-   thread_create().
+   After calling this function, be sure to initialize the page allocator before trying to create any threads with thread_create().
+   이 함수를 호출한 후 thread_create()를 사용하여 스레드를 생성하기 전에 페이지 할당자를 초기화해야 합니다.
 
-   It is not safe to call thread_current() until this function
-   finishes. */
+   It is not safe to call thread_current() until this function finishes. 
+   이 함수가 완료될 때까지 thread_current()를 호출하는 것은 안전하지 않습니다.
+*/
 void
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -117,8 +118,7 @@ thread_init (void) {
 	initial_thread->tid = allocate_tid ();
 }
 
-/* Starts preemptive thread scheduling by enabling interrupts.
-   Also creates the idle thread. */
+/* Starts preemptive thread scheduling by enabling interrupts. Also creates the idle thread. */
 void
 thread_start (void) {
 	/* Create the idle thread. */
@@ -292,8 +292,10 @@ thread_exit (void) {
 	NOT_REACHED ();
 }
 
-/* Yields the CPU.  The current thread is not put to sleep and
-   may be scheduled again immediately at the scheduler's whim. */
+/* 
+Yields the CPU.  The current thread is not put to sleep and may be scheduled again immediately at the scheduler's whim. 
+CPU를 양보합니다. 현재 스레드는 sleep 상태로 놓여지지 않고, 스케줄러의 변덕에 따라 즉시 다시 예약될 수 있습니다.
+*/
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
