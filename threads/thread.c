@@ -28,6 +28,10 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of processes in THREAD_BLOCKED state, that is, processes
+   that are sleeping.*/
+static struct list sleep_list; // [project1-A]
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -109,6 +113,8 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init (&sleep_list); // [project1-A]
+	
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -245,10 +251,35 @@ thread_unblock (struct thread *t) {
 	intr_set_level (old_level);
 }
 
-//////////////////////////////////////////////////////
+/* make a thread sleep */
+void sleep_thread(int64_t waiting_time){ //[project1-A]
 
+	struct thread* current_thread = thread_current();
+	current_thread->sleeping_time = waiting_time;
+	list_push_back(&sleep_list, &current_thread->elem);
+	thread_block();
+}
 
-/////////////////////////////////////////////////////
+/* wake up the thread which satisfies awaking conditions: 
+	over the waiting time in itself.*/
+void awake_thread(int64_t ticks){ //[project1-A]
+
+	struct list_elem * p;
+
+	for(p = list_begin(&sleep_list); p != list_end(&sleep_list);){
+
+		struct thread* sleeped_thread = list_entry(p,struct thread,elem);
+
+		if (sleeped_thread->sleeping_time <= ticks){
+			//list_remove returns next elem in the list.
+			p=list_remove(p);
+			thread_unblock(sleeped_thread);
+			continue;
+			}
+		p=list_next(p);
+		}
+}
+
 
 /* Returns the name of the running thread. */
 const char *
