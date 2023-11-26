@@ -38,6 +38,7 @@
 #include "filesys/fsutil.h"
 #endif
 
+
 /* Page-map-level-4 with kernel mappings only. */
 uint64_t *base_pml4;
 
@@ -63,6 +64,35 @@ static void print_stats (void);
 
 
 int main (void) NO_RETURN;
+
+/*
+
+1. BSS 세그먼트 초기화(bss_init): 
+	BSS 세그먼트를 0으로 초기화하여, 초기화되지 않은 전역 변수들을 초기 상태로 설정합니다.
+
+2. 커맨드 라인 파싱(read_command_line, parse_options): 
+	부팅 시 전달된 커맨드 라인 인수를 분석하고 옵션을 구문 분석합니다.
+
+3. 스레드 및 기타 시스템 초기화:
+	- thread_init(): 스레드 시스템 초기화.
+	- console_init(): 콘솔 초기화.
+	- palloc_init(), malloc_init(), paging_init(): 메모리 관리 시스템 초기화.
+
+4. 장치 및 인터럽트 시스템 초기화: 
+	타이머, 키보드, 직렬 포트 등의 장치 및 인터럽트 핸들러 초기화.
+
+5. 파일 시스템 및 가상 메모리 시스템 초기화(선택적): 
+	파일 시스템 및 가상 메모리 시스템이 있다면 초기화합니다.
+
+6. 액션 실행(run_actions): 
+	커맨드 라인에서 지정된 작업(예: 테스트 실행)을 수행합니다.
+
+7. 시스템 종료: 
+	모든 작업이 완료되면, 시스템을 종료하거나 종료 메시지를 출력합니다.
+
+이 파일은 PintOS가 부팅되고 초기화되는 전체 과정을 관리하며, 시스템의 핵심 구성 요소를 설정하는 역할을 합니다.
+
+*/
 
 /* Pintos main program. */
 int

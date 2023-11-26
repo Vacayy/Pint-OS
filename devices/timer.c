@@ -99,7 +99,15 @@ timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-	thread_sleep(start + ticks); // 현재 시간 + 잠들 시간		
+
+	enum intr_level old_level;	
+	old_level = intr_disable (); // 인터럽트 -> OFF
+
+	thread_sleep(start + ticks); // 현재 시간 + 잠들 시간			
+
+	// 인터럽트 -> ON
+	intr_set_level (old_level);
+	
 }      
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -129,18 +137,10 @@ timer_print_stats (void) {
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
-	/*
-	tick마다 timer 인터럽트시 호출됨
-	
-	thread_awake(): 
-		1. sleep list에서 깨어날 쓰레드 있는지 확인
-		2. 있다면 sleep list 순회하며 쓰레드 깨우기
-	*/
 	ticks++;
 
-	thread_print_stats();
-	thread_awake(ticks);
-	
+	// thread_print_stats();
+	thread_awake(ticks);	
 	thread_tick ();	
 }
 

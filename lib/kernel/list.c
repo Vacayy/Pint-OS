@@ -203,13 +203,12 @@ list_push_back (struct list *list, struct list_elem *elem) {
 	list_insert (list_end (list), elem);
 }
 
-/* Removes ELEM from its list and returns the element that
-   followed it.  Undefined behavior if ELEM is not in a list.
+/* Removes ELEM from its list and returns the element that followed it.  
+   Undefined behavior if ELEM is not in a list.
 
-   It's not safe to treat ELEM as an element in a list after
-   removing it.  In particular, using list_next() or list_prev()
-   on ELEM after removal yields undefined behavior.  This means
-   that a naive loop to remove the elements in a list will fail:
+   It's not safe to treat ELEM as an element in a list after removing it.  
+   In particular, using list_next() or list_prev() on ELEM after removal yields undefined behavior.  
+   This means that a naive loop to remove the elements in a list will fail:
 
  ** DON'T DO THIS **
  for (e = list_begin (&list); e != list_end (&list); e = list_next (e))

@@ -220,21 +220,15 @@ thread_create (const char *name, int priority,
 	return tid;
 }
 
+
 void
 thread_sleep(int64_t ticks){
-	/* 
-	thread를 sleep list에 삽입하고 blocked 상태 만들어 대기
-	해당 과정 중에는 인터럽트 받지 X	
-	*/
-	enum intr_level old_level;
-	old_level = intr_disable ();
+	struct thread *current = thread_current (); 
 
-	struct thread *curr = thread_current (); 
-	curr->wakeup_tick = ticks;
-	list_push_back(&sleep_list, &curr->elem);
-	thread_block();
-	
-	intr_set_level (old_level);
+	current->wakeup_tick = ticks;
+	list_push_back(&sleep_list, &current->elem);	
+
+	thread_block(); // THREAD_BLOCKED 후 schedule()	
 }
 
 void
@@ -245,56 +239,33 @@ thread_awake(int64_t ticks){
 	*/
 	if (!list_empty(&sleep_list)) {
         struct list_elem *wakeup_check;
-        wakeup_check = list_begin(&sleep_list);		
-		while (true){
+
+		for(wakeup_check = list_begin(&sleep_list); 
+			wakeup_check != list_end(&sleep_list); 			
+			){				
+			
 			struct thread *tmp = list_entry(wakeup_check, struct thread, elem);
-			// 수정 >>>>>
-			if (tmp->wakeup_tick >= ticks){
-				// 0. 해당 쓰레드 unblock
+			if (tmp->wakeup_tick <= ticks){				
+				wakeup_check = list_remove(&tmp->elem);				
 				thread_unblock(tmp);
-				// 1. sleep_list에서 제거
-				list_remove(&tmp->elem);	
-				// 2. ready_list에 넣기
-				list_push_back(&ready_list, &tmp->elem);
-				// 보내주는 로직?
-
-			if(wakeup_check == list_end(&sleep_list)){
-				break;
+				continue;
 			}
+		wakeup_check = list_next(wakeup_check); 
+		/* 
+		list_next(wakeup_check)를 for문 조건부 밖에서 처리하는 이유: 
+			for 문 안에서 처리하면 list_remove()가 이뤄져도 무조건 list_next()가 작동함.
+			이게 예외 케이스에 걸리게 된다.  
+		*/ 
+		}
 
-			wakeup_check = list_next(wakeup_check);
-			} 	
-        }
     }
 }
 
-// void 
-// update_wakeup_tick() {
-// 	// sleep list 순회하면서 wakeup_tick --
-//     if (!list_empty(&sleep_list)) {
-//         struct list_elem *update;
-//         for (update = list_begin(&sleep_list); update != list_end(&sleep_list); update = list_next(update)) {
-//             struct thread *tmp = list_entry(update, struct thread, elem);
-//             tmp->wakeup_tick --;
-//         }
-//     }
-// }
 
-
-// void
-// update_next_tick_to_awake(int64_t ticks){
-// 	/* next_tick_to_awake 변수를 업데이트 - 깨워야 할 쓰레드 중 가장 작은 tick을 갖도록 */	
-// }
-
-// int64_t
-// get_next_tick_to_awake(void){
-// 	/* next_tick_to_awake 반환 */
-// }
-
-
-/* Puts the current thread to sleep.  
-	It will not be scheduled again until awoken by thread_unblock().
-	thread_unblock()에 의해 깨어날 때까지 다시 스케줄되지 않습니다.
+/* 
+	현재 쓰레드 status -> THREAD_BLOCKED로 바꿈
+	Puts the current thread to sleep.  
+	It will not be scheduled again until awoken by thread_unblock().	
 
    This function must be called with interrupts turned off.  It
    is usually a better idea to use one of the synchronization
@@ -385,7 +356,7 @@ CPU를 양보합니다. 현재 스레드는 sleep 상태로 놓여지지 않고,
 */
 void
 thread_yield (void) {
-	struct thread *curr = thread_current (); // 현재 running 쓰레드 반환
+	struct thread *curr = thread_current (); // 현재 running 쓰레드
 	enum intr_level old_level; // on = 인터럽트 가능 | off = 불가능
 	ASSERT (!intr_context ());
 
@@ -629,7 +600,7 @@ do_schedule(int status) {
 	while (!list_empty (&destruction_req)) { // 리스트가 비지 않았다면
 		struct thread *victim = // 최우선순위 꺼내기
 			list_entry (list_pop_front (&destruction_req), struct thread, elem); 
-		palloc_free_page(victim); // 메모리 할당
+		palloc_free_page(victim); // 메모리 free
 	}
 	thread_current ()->status = status; // 상태 -> ready로 바꿈
 	schedule ();
@@ -655,8 +626,8 @@ schedule (void) {
 #endif
 
 	if (curr != next) {
-		/* If the thread we switched from is dying, destroy its struct
-		   thread. This must happen late so that thread_exit() doesn't
+		/* If the thread we switched from is dying, destroy its struct thread. 
+		   This must happen late so that thread_exit() doesn't
 		   pull out the rug under itself.
 		   We just queuing the page free reqeust here because the page is
 		   currently used by the stack.
