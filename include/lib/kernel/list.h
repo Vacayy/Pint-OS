@@ -95,11 +95,14 @@ struct list {
 	struct list_elem tail;      /* List tail. */
 };
 
-/* Converts pointer to list element LIST_ELEM into a pointer to
-   the structure that LIST_ELEM is embedded inside.  Supply the
-   name of the outer structure STRUCT and the member name MEMBER
-   of the list element.  See the big comment at the top of the
-   file for an example. */
+/* 
+   Converts pointer to list element LIST_ELEM into a pointer to the structure that LIST_ELEM is embedded inside.  
+   LIST_ELEM에 대한 포인터를 LIST_ELEM을 포함하고 있는 struct에 대한 포인터로 변환합니다.
+   Supply the name of the outer structure STRUCT and the member name MEMBER of the list element.  
+   외부 STRUCT의 이름과 list element의 멤버 이름 MEMBER를 제공합니다. 
+
+   See the big comment at the top of the file for an example. 
+*/
 #define list_entry(LIST_ELEM, STRUCT, MEMBER)           \
 	((STRUCT *) ((uint8_t *) &(LIST_ELEM)->next     \
 		- offsetof (STRUCT, MEMBER.next)))

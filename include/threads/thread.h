@@ -79,12 +79,18 @@ typedef int tid_t;
  * the `magic' member of the running thread's `struct thread' is
  * set to THREAD_MAGIC.  Stack overflow will normally change this
  * value, triggering the assertion. */
-/* The `elem' member has a dual purpose.  It can be an element in
- * the run queue (thread.c), or it can be an element in a
- * semaphore wait list (synch.c).  It can be used these two ways
- * only because they are mutually exclusive: only a thread in the
- * ready state is on the run queue, whereas only a thread in the
- * blocked state is on a semaphore wait list. */
+/* 
+	The `elem' member has a dual purpose.  
+	`elem' 멤버는 두 가지 목적을 가지고 있습니다.
+	It can be an element in the run queue (thread.c), 
+	실행 대기열(thread.c)의 요소일 수 있습니다.
+	or it can be an element in a semaphore wait list (synch.c).  
+	또는 세마포어 대기 목록(synch.c)의 요소일 수 있습니다.
+	It can be used these two ways only because they are mutually exclusive: 
+	이 두 가지 방법은 상호 배타적이기 때문에 사용할 수 있습니다.
+	only a thread in the ready state is on the run queue, whereas only a thread in the blocked state is on a semaphore wait list. 
+	준비 상태의 스레드만 실행 큐에 있고 차단 상태의 스레드만 세마포 대기 목록에 있습니다.
+*/
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
@@ -94,6 +100,8 @@ struct thread {
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+
+	int wakeup_tick;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -142,5 +150,12 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+
+
+void thread_sleep(int64_t ticks);
+void thread_awake(int64_t ticks);
+void update_next_tick_to_awake(int64_t ticks);
+int64_t get_next_tick_to_awake(void);
+
 
 #endif /* threads/thread.h */

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Interrupts on or off? */
+/* CPU가 인터럽트를 받을 수 있는가 여부: Interrupts on or off? */
 enum intr_level {
 	INTR_OFF,             /* Interrupts disabled. */
 	INTR_ON               /* Interrupts enabled. */

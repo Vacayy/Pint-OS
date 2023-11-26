@@ -45,7 +45,10 @@ timer_init (void) {
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
 
-/* Calibrates loops_per_tick, used to implement brief delays. */
+/* 
+	Calibrates loops_per_tick, used to implement brief delays. 
+	짧은 지연을 구현하는 데 사용되는 loops_per_tick을 보정합니다.
+*/
 void
 timer_calibrate (void) {
 	unsigned high_bit, test_bit;
@@ -80,8 +83,10 @@ timer_ticks (void) {
 	return t;
 }
 
-/* Returns the number of timer ticks elapsed since THEN, which
-   should be a value once returned by timer_ticks(). */
+/* Returns the number of timer ticks elapsed since THEN, which should be a value once returned by timer_ticks(). 
+   THEN 이후 경과된 타이머 틱 수를 반환합니다. 이 값은 timer_ticks()에 의해 반환된 값이어야 합니다.
+   인자로 전달된 tick 이후 몇 tick이 지났는지 반환 (like 스탑 워치)
+*/
 int64_t
 timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
@@ -94,9 +99,8 @@ timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
-}
+	thread_sleep(start + ticks); // 현재 시간 + 잠들 시간		
+}      
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -125,8 +129,19 @@ timer_print_stats (void) {
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
+	/*
+	tick마다 timer 인터럽트시 호출됨
+	
+	thread_awake(): 
+		1. sleep list에서 깨어날 쓰레드 있는지 확인
+		2. 있다면 sleep list 순회하며 쓰레드 깨우기
+	*/
 	ticks++;
-	thread_tick ();
+
+	thread_print_stats();
+	thread_awake(ticks);
+	
+	thread_tick ();	
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
