@@ -43,6 +43,7 @@ Three things to consider:
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -77,12 +78,39 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
-		list_push_back (&sema->waiters, &thread_current ()->elem);
+		if (!list_empty(&sema->waiters)){
+			list_insert_ordered(&sema->waiters, &thread_current()->elem, cmp_sem_priority, NULL);			
+		}
+		else {
+			list_push_back (&sema->waiters, &thread_current ()->elem);
+		}
 		thread_block ();
 	}
 	sema->value--;
 	intr_set_level (old_level);
 }
+
+bool  // proj1-pri
+cmp_sem_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED){	
+	/* 
+		첫번째 인자로 주어진 세마포어를 위해 대기 중인 가장 높은 우선순위의
+		스레드와 두번째 인자로 주어진 세마포어를 위해 대기 중인 가장 높은
+		우선순위의 스레드와 비교 
+	*/
+
+	struct semaphore_elem *a = list_entry(a_, struct semaphore_elem, elem);
+	struct semaphore_elem *b = list_entry(b_, struct semaphore_elem, elem);
+
+	struct semaphore *a_sema = &a->semaphore; 
+	struct semaphore *b_sema = &b->semaphore; 
+
+	struct thread *a_first = list_front(&a_sema->waiters);
+	struct thread *b_first = list_front(&b_sema->waiters);	
+	
+
+	return a_first->priority > b_first->priority;	
+}
+
 
 /* Down or "P" operation on a semaphore, but only if the
    semaphore is not already 0.  Returns true if the semaphore is
@@ -120,10 +148,21 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
+
+	list_sort(&sema->waiters, cmp_sem_priority, NULL); // proj1-pri
+
+	struct thread *candidate = list_front(&sema->waiters);
+
 	if (!list_empty (&sema->waiters))
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
 	sema->value++;
+
+	// proj1-pri
+	if (candidate->priority > thread_get_priority()){
+		thread_yield();
+	}
+
 	intr_set_level (old_level);
 }
 
@@ -293,9 +332,16 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
+	
+	if (!list_empty(&cond->waiters)){
+		list_insert_ordered(&cond->waiters, &waiter.elem, cmp_sem_priority, NULL);			
+	}
+	else {
+		list_push_back (&cond->waiters, &waiter.elem);
+	}	
+
 	lock_release (lock);
-	sema_down (&waiter.semaphore);
+	sema_down (&waiter.semaphore); // value가 0이 아니게될 때까지 대기 -> 점유
 	lock_acquire (lock);
 }
 
@@ -332,3 +378,5 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
 }
+
+

@@ -66,6 +66,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -182,7 +183,7 @@ thread_print_stats (void) {
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t // proj1-pri
+tid_t 
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
@@ -214,7 +215,7 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 	
-	// 추가: thread_get_priority -> 얘가 더 높으면 yield 호출
+	// proj1-pri
 	if (t->priority > thread_get_priority()){
 		thread_yield();
 	}
@@ -265,7 +266,7 @@ cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux U
 	struct thread *a = list_entry (a_, struct thread, elem);
   	struct thread *b = list_entry (b_, struct thread, elem);
   
-  return a->priority < b->priority;	
+  return a->priority > b->priority;	
 }
 
 /* make a thread sleep */
@@ -363,8 +364,18 @@ thread_yield (void) {
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
-thread_set_priority (int new_priority) {
+thread_set_priority (int new_priority) { // proj1-pri
 	thread_current ()->priority = new_priority;
+
+	// 추가: 변동된 우선순위 vs ready list의 최우선순위 비교 후 처리
+	if(!list_empty (&ready_list)){
+		struct list_elem *candidate_ = list_front(&ready_list);
+		struct thread *candidate = list_entry (candidate_, struct thread, elem);	
+
+		if(candidate->priority > new_priority){
+			thread_yield(); 
+		}
+	}
 }
 
 /* Returns the current thread's priority. */
