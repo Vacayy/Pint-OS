@@ -25,6 +25,17 @@
    PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
    MODIFICATIONS.
    */
+/*
+Three things to consider: 
+1. When selecting a thread to run in the ready list, select the one with the highest priority.
+2. Preemption
+	- When inserting the new thread to the ready list, compare the priority with the running thread.
+	- Schedule the newly inserted thread if it has the higher priority with the currently running thread.
+3. Lock: semaphore, condition variable, 
+	- When selecting a thread from the set of threads waiting for a lock (or condition variable), select the one with the highest priority.
+*/
+
+
 
 #include "threads/synch.h"
 #include <stdio.h>

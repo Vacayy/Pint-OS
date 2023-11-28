@@ -412,8 +412,8 @@ list_sort (struct list *list, list_less_func *less, void *aux) {
 	ASSERT (is_sorted (list_begin (list), list_end (list), less, aux));
 }
 
-/* Inserts ELEM in the proper position in LIST, which must be
-   sorted according to LESS given auxiliary data AUX.
+/* Inserts ELEM in the proper position in LIST, 
+	which must be sorted according to LESS given auxiliary data AUX.
    Runs in O(n) average case in the number of elements in LIST. */
 void
 list_insert_ordered (struct list *list, struct list_elem *elem,

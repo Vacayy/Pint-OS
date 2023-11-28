@@ -182,7 +182,7 @@ thread_print_stats (void) {
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t
+tid_t // proj1-pri
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
@@ -210,8 +210,14 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+		
 	/* Add to run queue. */
 	thread_unblock (t);
+	
+	// 추가: thread_get_priority -> 얘가 더 높으면 yield 호출
+	if (t->priority > thread_get_priority()){
+		thread_yield();
+	}
 
 	return tid;
 }
@@ -238,7 +244,7 @@ thread_block (void) {
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
-void
+void // proj1-pri
 thread_unblock (struct thread *t) {
 	enum intr_level old_level;
 
@@ -246,9 +252,20 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	
+	list_insert_ordered (&ready_list, &t->elem, cmp_priority, NULL);
+
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
+}
+
+bool  // proj1-pri
+cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED){
+	// 인자로 주어진 스레드들의 우선순위를 비교
+	struct thread *a = list_entry (a_, struct thread, elem);
+  	struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->priority < b->priority;	
 }
 
 /* make a thread sleep */
@@ -268,7 +285,7 @@ void awake_thread(int64_t ticks){ //[project1-A]
 
 	for(p = list_begin(&sleep_list); p != list_end(&sleep_list);){
 
-		struct thread* sleeped_thread = list_entry(p,struct thread,elem);
+		struct thread* sleeped_thread = list_entry(p, struct thread, elem);
 
 		if (sleeped_thread->sleeping_time <= ticks){
 			//list_remove returns next elem in the list.
@@ -330,7 +347,7 @@ thread_exit (void) {
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
-void
+void 
 thread_yield (void) {
 	struct thread *curr = thread_current ();
 	enum intr_level old_level;
@@ -338,8 +355,8 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	if (curr != idle_thread)		
+		list_insert_ordered (&ready_list, &curr->elem, cmp_priority, NULL); // proj1-pri
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }

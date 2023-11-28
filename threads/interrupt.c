@@ -259,10 +259,10 @@ intr_context (void) {
 	return in_external_intr;
 }
 
-/* During processing of an external interrupt, directs the
-   interrupt handler to yield to a new process just before
-   returning from the interrupt.  May not be called at any other
-   time. */
+/* During processing of an external interrupt, directs the interrupt handler to yield to a new process just before returning from the interrupt.  
+   외부 인터럽트를 처리하는 동안 인터럽트 핸들러가 인터럽트에서 복귀하기 직전에 새 프로세스를 양보하도록 지시합니다.
+   May not be called at any other time. 
+   */
 void
 intr_yield_on_return (void) {
 	ASSERT (intr_context ());
@@ -324,10 +324,14 @@ pic_end_of_interrupt (int irq) {
 }
 /* Interrupt handlers. */
 
-/* Handler for all interrupts, faults, and exceptions.  This
-   function is called by the assembly language interrupt stubs in
-   intr-stubs.S.  FRAME describes the interrupt and the
-   interrupted thread's registers. */
+/* 
+	Handler for all interrupts, faults, and exceptions.  
+	모든 인터럽트, 오류 및 예외에 대한 처리기입니다.
+	This function is called by the assembly language interrupt stubs in intr-stubs.S.  
+	이 함수는 intr-stubs.S의 어셈블리 언어 인터럽트 스텁에 의해 호출됩니다.
+	FRAME describes the interrupt and the interrupted thread's registers. 
+	FRAME은 인터럽트와 인터럽트된 스레드의 레지스터를 설명합니다.
+   */
 void
 intr_handler (struct intr_frame *frame) {
 	bool external;
