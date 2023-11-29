@@ -68,6 +68,8 @@ static void schedule (void);
 static tid_t allocate_tid (void);
 bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
 
+void thread_preempt();
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -215,12 +217,22 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 	
-	// proj1-pri
-	if (t->priority > thread_get_priority()){
-		thread_yield();
-	}
+	thread_preempt();
 
 	return tid;
+}
+
+void thread_preempt() {	
+	if (list_empty(&ready_list)){ 
+		return;
+	}
+
+	struct list_elem* candidate_ = list_front(&ready_list);
+	struct thread* candidate = list_entry(candidate_, struct thread, elem);	
+
+	if (candidate->priority > thread_get_priority()){
+		thread_yield();
+	}
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -473,6 +485,12 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	
+	// priority donation을 위한 필드 초기화
+	t->pd.beginning_priority = priority;
+	t->pd.waiting_lock = NULL;
+	// t->pd.multiple_donation = NULL;
+	// t->pd.multiple_donation_elem = NULL;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
