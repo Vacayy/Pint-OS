@@ -487,10 +487,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->magic = THREAD_MAGIC;
 	
 	// priority donation을 위한 필드 초기화
-	t->pd.beginning_priority = priority;
-	t->pd.waiting_lock = NULL;
-	// t->pd.multiple_donation = NULL;
-	// t->pd.multiple_donation_elem = NULL;
+	t->prev_priority = priority;
+	t->waiting_lock = NULL;		
+	list_init(&t->having_locks);	
+	
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

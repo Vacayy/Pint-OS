@@ -211,32 +211,30 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	// struct thread *lock_holder = &lock -> holder;
-
-	// // priority donation
-	// if (lock_holder->priority < thread_current()->priority){		
-	// 	lock_holder->priority = thread_current()->priority;
-	// }
 	enum intr_level old_level;
 	old_level = intr_disable ();
 
 	struct semaphore *lock_sema = &lock->semaphore;
 	while (&lock_sema->value == 0){
 		// 1. wait을 하게 될 lock 자료구조 포인터 저장
-		thread_current()->pd.waiting_lock = &lock;
-		// 2. lock의 현재 holder의 대기자 list에 추가
+		thread_current()->waiting_lock = lock;
+		// 2. lock 대기자 list에 추가
 		list_insert_ordered(&lock_sema->waiters, &thread_current()->elem, cmp_priority, NULL);
 		// 3. priority donation 수행
 		donate_priority();
 		
-		thread_block ();
+		thread_block (); // blocked 상태 만들기 & 다음 쓰레드 실행
 	}
 
 	lock_sema->value--;
-	intr_set_level (old_level);
-	 
+	
+	// lock 획득 시 -> 현 쓰레드 having_locks에 해당 lock 추가하기
+	struct list *having_locks = &thread_current()->having_locks;
+	list_push_back(&having_locks, &lock->elem);	
+	
 	// sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
+	intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -270,7 +268,36 @@ lock_release (struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	lock->holder = NULL;
-	sema_up (&lock->semaphore);
+	sema_up (&lock->semaphore); 
+
+	// multiple donation시 반환 예외상황 고려해주기
+	// 쓰레드의 having_locks에서 해당 lock 찾기 -> 삭제	
+	struct list *having_locks = &thread_current()->having_locks;
+	list_remove(&lock->elem);
+
+	int curr_priority = thread_current()->priority;
+	int prev_priority = thread_current()->prev_priority;
+
+	if (list_empty(having_locks)){
+		curr_priority = prev_priority;
+	} else {
+		struct list_elem *p;			
+		for (p = list_begin(&having_locks); p != list_end(&having_locks);){
+			struct lock *having_lock = list_entry(p, struct lock, elem);
+			struct list *waiters = &having_lock->semaphore.waiters;
+			// waiters를 priority 기준 정렬
+			list_sort(&waiters, cmp_sem_priority, NULL);
+			struct thread *candidate = list_begin(waiters);
+			if (prev_priority < candidate->priority){
+				curr_priority = candidate->priority;
+			} else {
+				curr_priority = prev_priority;
+			}
+		}
+	}
+	
+
+
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -404,9 +431,22 @@ cmp_sem_priority(const struct list_elem *a_, const struct list_elem *b_, void *a
 }
 
 /* priority donation을 수행 */
-void donate_priority(void){
-	// lock->waiters에서 가장 큰 값의 우선순위를 현재 스레드에 donate
-	
+void donate_priority(void) {
+    struct thread *curr = thread_current();
+    int nested_depth = 0;
 
+    while (nested_depth < 8) {
+        struct lock *waiting_lock = curr->waiting_lock;
+        struct thread *lock_holder = waiting_lock->holder;
+
+        if (curr->priority > lock_holder->priority) {
+            lock_holder->priority = curr->priority;
+            curr = lock_holder; // 더 깊게 들어가기
+        } else { 
+            break; // 더 들어갈 필요 X
+        }
+
+        nested_depth++;
+    }
 }
 
