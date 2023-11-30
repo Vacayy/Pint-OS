@@ -66,7 +66,6 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
-bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
 
 void thread_preempt();
 
@@ -116,7 +115,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
-	list_init (&sleep_list); // [project1-A]
+	list_init (&sleep_list); // [project1-A]	
 	
 
 	/* Set up a thread structure for the running thread. */
@@ -379,7 +378,7 @@ void
 thread_set_priority (int new_priority) { // proj1-pri
 	thread_current ()->priority = new_priority;
 
-	// 추가: 변동된 우선순위 vs ready list의 최우선순위 비교 후 처리
+	// 변동된 우선순위 vs ready list의 최우선순위 비교 후 처리
 	if(!list_empty (&ready_list)){
 		struct list_elem *candidate_ = list_front(&ready_list);
 		struct thread *candidate = list_entry (candidate_, struct thread, elem);	
@@ -487,8 +486,8 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->magic = THREAD_MAGIC;
 	
 	// priority donation을 위한 필드 초기화
-	t->prev_priority = priority;
-	t->waiting_lock = NULL;		
+	// t->waiting_lock = NULL;
+	t->prev_priority = priority;	
 	list_init(&t->having_locks);	
 	
 }

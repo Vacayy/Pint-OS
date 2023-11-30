@@ -153,7 +153,7 @@ sema_test_helper (void *sema_) {
 		sema_up (&sema[1]);
 	}
 }
-
+
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
    is, it is an error for the thread currently holding a lock to
@@ -190,8 +190,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
-	
-	if (lock->holder != NULL){ // lock holder가 존재한다면
+
+
+	if (lock->holder != NULL){
 		// 1. wait을 하게 될 lock 자료구조 포인터 저장
 		thread_current()->waiting_lock = lock;			
 
@@ -239,6 +240,7 @@ lock_release (struct lock *lock) {
 
 	lock->holder = NULL;
 	
+
 	// multiple donation시 반환 예외상황 고려해주기	
 	list_remove(&lock->elem);
 
@@ -250,7 +252,8 @@ lock_release (struct lock *lock) {
 		for (p = list_begin(having_locks); p != list_end(having_locks); p = list_next(p)) {
 			struct lock *having_lock = list_entry(p, struct lock, elem);
 			struct list *waiters = &(having_lock->semaphore.waiters);
-			
+
+			// waiters 리스트가 비어있지 않은 경우에만 정렬 수행
 			if (!list_empty(waiters)) {
 				list_sort(waiters, cmp_priority, NULL);
 				struct thread *candidate = list_entry(list_front(waiters), struct thread, elem);
