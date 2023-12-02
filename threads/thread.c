@@ -11,6 +11,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -68,6 +69,9 @@ static void schedule (void);
 static tid_t allocate_tid (void);
 
 void thread_preempt();
+
+/* system load average in MLFQ */
+int load_avg;
 
 
 /* Returns true if T appears to point to a valid thread. */
@@ -135,14 +139,14 @@ thread_start (void) {
 	sema_init (&idle_started, 0);
 	thread_create ("idle", PRI_MIN, idle, &idle_started);
 
+	/* system load average in MLFQ */
+	int load_avg = 0;
+
 	/* Start preemptive thread scheduling. */
 	intr_enable ();
 
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down (&idle_started);
-
-	/* MLFQ */
-	int load_avg = 0;
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -410,10 +414,6 @@ thread_set_priority (int new_priority) { // proj1-pri
 		curr->priority = prev_priority;
 	}
 
-	if (thread_mlfqs){
-
-		
-	}
 
 	// 변동된 우선순위 vs ready list의 최우선순위 비교 후 yield()
 	if(!list_empty (&ready_list)){
@@ -435,29 +435,27 @@ thread_get_priority (void) {
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) {
-	/* TODO: Your implementation goes here */
+thread_set_nice (int nice) {
+	thread_current ()->nice = nice;
 }
 
 /* Returns the current thread's nice value. */
 int
-thread_get_nice (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+thread_get_nice (void) {	
+	return thread_current ()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
-thread_get_load_avg (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+thread_get_load_avg (void) { 
+	return load_avg * 100;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
-thread_get_recent_cpu (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+thread_get_recent_cpu (void) {	
+	int recent_cpu = thread_current ()->recent_cpu;
+	return recent_cpu * 100;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -710,3 +708,90 @@ allocate_tid (void) {
 
 	return tid;
 }
+
+/* Functions for implemeting advanced scheduling */
+
+/* Calculate priority in mlfqs (return int) */
+int
+mlfqs_calc_priority (void){
+	int int_recent_cpu = thread_current ()->recent_cpu;
+	int fp_recent_cpu = int_to_fp(int_recent_cpu);
+	int nice = thread_current ()->nice;
+
+	int fp_new_priority = PRI_MAX - (fp_recent_cpu / 4) - (2 * nice);
+	int int_new_priority = fp_to_int_round(fp_new_priority);
+
+	return int_new_priority;
+}
+
+/* Calculate recent_cpu in mlfqs (return int) 
+(Thread traversal is implemented outside of the function.) */	
+int 
+mlfqs_calc_recent_cpu (struct thread *t){ 	
+	int int_old_recent_cpu = &t->recent_cpu;
+	int nice = &t->nice;	
+
+	int fp_old_recent_cpu = int_to_fp(int_old_recent_cpu);
+		
+	int int_load_avg = load_avg;
+	int fp_new_recent_cpu = ((2 * int_load_avg) / (2 * int_load_avg + 1)) * 
+						fp_old_recent_cpu + nice;
+	int int_new_recent_cpu = fp_to_int(fp_new_recent_cpu);
+	return int_new_recent_cpu;	
+}
+
+/* Update system load average (int) */
+void
+mlfqs_update_load_avg (int ready_threads){
+	int int_old_load_avg = load_avg;
+	int fp_old_load_avg = int_to_fp(int_old_load_avg);
+
+	int fp_new_load_avg = ((59/60) * fp_old_load_avg) + 
+						((1/60)*ready_threads);
+
+	int int_new_load_avg = fp_to_int(fp_new_load_avg);
+	load_avg = int_new_load_avg;
+}
+
+/* Count system ready threads, excepting idle thread */
+int 
+mlfqs_count_ready_threads (void){
+	int count = 0;
+	if (thread_current != idle_thread){
+		count ++;
+	}
+	
+	if (!list_empty(&ready_list)) {
+		struct list_elem *p;
+		for (p = list_begin(&ready_list); p != list_end(&ready_list); p = list_next(p)){
+			count ++;
+		}
+	}
+
+	return count;
+}
+
+/* 
+더 해야할 일: 
+	1. thread.c 추가 함수들 구현 완료하기
+		- priority 결과는 반올림
+		- recent_cpu 결과는 내림
+	
+	2. timer interrupt
+		- 1tick 마다: recent cpu 카운트
+			- thread_current ()->recent_cpu ++;
+			- yield() 수행 (이건 timer interrupt 하단에서 진행)
+
+		- 100ticks 마다: recent cpu 업데이트
+			- mlfqs_count_ready_threads
+			- mlfqs_update_load_avg
+			- 모든 쓰레드 순회 (idle 제외, ready & sleep)
+			- mlfqs_calc_recent_cpu
+
+		- 4ticks 마다: priority 재계산
+			- mlfqs_calc_priority
+			- thread_current ()->priority에 결과 담기			
+
+*/
+
+
