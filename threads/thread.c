@@ -69,6 +69,7 @@ static tid_t allocate_tid (void);
 
 void thread_preempt();
 
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -139,6 +140,9 @@ thread_start (void) {
 
 	/* Wait for the idle thread to initialize idle_thread. */
 	sema_down (&idle_started);
+
+	/* MLFQ */
+	int load_avg = 0;
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -376,9 +380,42 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) { // proj1-pri
-	thread_current ()->priority = new_priority;
+	struct thread *curr = thread_current();	
+	
+	/* Priority scheduling using donations */
+	if (!thread_mlfqs){	
+		// base_priority를 new priority로 바꾼 후, donate 받아야 하는지 검사
+		curr->base_priority = new_priority;
+		struct list *having_locks = &curr->having_locks;
 
-	// 변동된 우선순위 vs ready list의 최우선순위 비교 후 처리
+		int prev_priority = curr->base_priority;	
+
+		if(!list_empty(&having_locks)){		
+			struct list_elem *p;
+			for (p = list_begin(having_locks); p != list_end(having_locks); p = list_next(p)) {
+				struct lock *having_lock = list_entry(p, struct lock, elem);
+				struct list *waiters = &(having_lock->semaphore.waiters);
+				
+				if (!list_empty(waiters)) {
+					list_sort(waiters, cmp_priority, NULL);
+					struct thread *candidate = list_entry(list_front(waiters), struct thread, elem);
+
+					if (prev_priority < candidate->priority) {
+						prev_priority = candidate->priority;						
+					}
+				}
+			}
+		}
+		
+		curr->priority = prev_priority;
+	}
+
+	if (thread_mlfqs){
+
+		
+	}
+
+	// 변동된 우선순위 vs ready list의 최우선순위 비교 후 yield()
 	if(!list_empty (&ready_list)){
 		struct list_elem *candidate_ = list_front(&ready_list);
 		struct thread *candidate = list_entry (candidate_, struct thread, elem);	
@@ -386,7 +423,8 @@ thread_set_priority (int new_priority) { // proj1-pri
 		if(candidate->priority > new_priority){
 			thread_yield(); 
 		}
-	}
+	}	
+
 }
 
 /* Returns the current thread's priority. */
@@ -485,10 +523,13 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
 	
-	// priority donation을 위한 필드 초기화
-	// t->waiting_lock = NULL;
-	t->prev_priority = priority;	
-	list_init(&t->having_locks);	
+	/* priority donation을 위한 필드 초기화	*/
+	t->base_priority = priority;	
+	list_init(&t->having_locks);
+
+	/* MLFQ 필드 초기화 */
+	t->nice = 0;
+	t->recent_cpu = 0;
 	
 }
 

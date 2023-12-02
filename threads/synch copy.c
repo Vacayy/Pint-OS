@@ -245,7 +245,7 @@ lock_release (struct lock *lock) {
 	list_remove(&lock->elem);
 
 	struct list *having_locks = &thread_current()->having_locks;	
-	int new_priority = thread_current()->prev_priority;
+	int new_priority = thread_current()->base_priority;
 	
 	if(!list_empty(&having_locks)){		
 		struct list_elem *p;

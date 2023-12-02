@@ -192,17 +192,19 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 	
 	if (lock->holder != NULL){ // lock holder가 존재한다면
-		// 1. wait을 하게 될 lock 자료구조 포인터 저장
+		// wait을 하게 될 lock 자료구조 포인터 저장
 		thread_current()->waiting_lock = lock;			
 
-		// 2. priority donation 수행
-		struct lock *nested_lock = lock;		 
-		donate_priority(nested_lock);
+		// if not mlfqs, do priority donation (nested)
+		if (!thread_mlfqs){			
+			struct lock *nested_lock = lock;		 
+			donate_priority(nested_lock);
+		}
 	}
-	
+		
 	// lock 획득 시 -> 현 쓰레드 having_locks에 해당 lock 추가하기	
-	struct list *having_locks = &thread_current()->having_locks;	
 	sema_down (&lock->semaphore);
+	struct list *having_locks = &thread_current()->having_locks;	
 	list_push_back(having_locks, &lock->elem);	
 	lock->holder = thread_current ();	
 }
@@ -239,31 +241,35 @@ lock_release (struct lock *lock) {
 
 	lock->holder = NULL;
 	
-	// multiple donation시 반환 예외상황 고려해주기	
-	list_remove(&lock->elem);
+	list_remove(&lock->elem); // remove from lock holder's having_locks
 
-	struct list *having_locks = &thread_current()->having_locks;	
-	int new_priority = thread_current()->prev_priority;
-	
-	if(!list_empty(&having_locks)){		
-		struct list_elem *p;
-		for (p = list_begin(having_locks); p != list_end(having_locks); p = list_next(p)) {
-			struct lock *having_lock = list_entry(p, struct lock, elem);
-			struct list *waiters = &(having_lock->semaphore.waiters);
-			
-			if (!list_empty(waiters)) {
-				list_sort(waiters, cmp_priority, NULL);
-				struct thread *candidate = list_entry(list_front(waiters), struct thread, elem);
+	if (!thread_mlfqs){	
+		// multiple donation시 반환 예외상황 고려해주기	
+		struct list *having_locks = &thread_current()->having_locks;	
+		int new_priority = thread_current()->base_priority;
+		
+		// lock을 2개 이상 보유 중이었다면
+		if(!list_empty(&having_locks)){	
+			struct list_elem *p;
+			for (p = list_begin(having_locks); p != list_end(having_locks); p = list_next(p)) {
+				struct lock *having_lock = list_entry(p, struct lock, elem);
+				struct list *waiters = &(having_lock->semaphore.waiters);
+				
+				if (!list_empty(waiters)) {
+					list_sort(waiters, cmp_priority, NULL);
+					struct thread *candidate = list_entry(list_front(waiters), struct thread, elem);
 
-				if (new_priority < candidate->priority) {
-					new_priority = candidate->priority;						
+					if (new_priority < candidate->priority) {
+						new_priority = candidate->priority;						
+					}
 				}
 			}
-		}
+			}
+		// 새로운 우선순위 적용
+		thread_current()->priority = new_priority;
 	}			
-    // 새로운 우선순위 적용
-    thread_current()->priority = new_priority;
 	thread_current()->waiting_lock = NULL;
+	
 	sema_up (&lock->semaphore); 	
 }
 
@@ -396,21 +402,18 @@ cmp_sem_priority(const struct list_elem *a_, const struct list_elem *b_, void *a
 }
 
 /* priority donation을 수행 */
-void donate_priority(struct lock *nested_lock) {
-    struct thread *curr = thread_current();
-    int nested_depth = 0;
+void donate_priority(struct lock *nested_lock_ptr) {
+    struct thread *curr = thread_current();    
 
-    while (nested_lock) {
+    while (nested_lock_ptr) {
         struct lock *waiting_lock = curr->waiting_lock;
-        struct thread *lock_holder = nested_lock->holder;
+        struct thread *lock_holder = nested_lock_ptr->holder;
 
         if (curr->priority > lock_holder->priority) {
-            lock_holder->priority = curr->priority;
-		}
-		if (lock_holder->waiting_lock == NULL){
-			break;
+            lock_holder->priority = curr->priority; // 더 크면 donate
 		}
 
-		nested_lock = lock_holder->waiting_lock;
+		nested_lock_ptr = lock_holder->waiting_lock;
     }	
 }
+
