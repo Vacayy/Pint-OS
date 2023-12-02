@@ -68,8 +68,6 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
-void thread_preempt();
-
 /* system load average in MLFQ */
 int load_avg;
 
@@ -224,12 +222,14 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 	
-	thread_preempt();
+	thread_switch();
 
 	return tid;
 }
 
-void thread_preempt() {	
+/* Switch running thread if priority of first thread in ready list is bigger */
+void 
+thread_switch(void) {	
 	if (list_empty(&ready_list)){ 
 		return;
 	}
@@ -289,7 +289,8 @@ cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux U
 }
 
 /* make a thread sleep */
-void sleep_thread(int64_t waiting_time){ //[project1-A]
+void 
+sleep_thread(int64_t waiting_time){ //[project1-A]
 
 	struct thread* current_thread = thread_current();
 	current_thread->sleeping_time = waiting_time;
@@ -299,7 +300,8 @@ void sleep_thread(int64_t waiting_time){ //[project1-A]
 
 /* wake up the thread which satisfies awaking conditions: 
 	over the waiting time in itself.*/
-void awake_thread(int64_t ticks){ //[project1-A]
+void 
+awake_thread(int64_t ticks){ 
 
 	struct list_elem * p;
 
@@ -383,7 +385,7 @@ thread_yield (void) {
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
-thread_set_priority (int new_priority) { // proj1-pri
+thread_set_priority (int new_priority) { 
 	struct thread *curr = thread_current();	
 	
 	/* Priority scheduling using donations */
@@ -709,7 +711,7 @@ allocate_tid (void) {
 	return tid;
 }
 
-/* Functions for implemeting advanced scheduling */
+/* Functions for implementing advanced scheduling */
 
 /* Calculate priority in mlfqs (return int) */
 int
@@ -726,18 +728,58 @@ mlfqs_calc_priority (void){
 
 /* Calculate recent_cpu in mlfqs (return int) 
 (Thread traversal is implemented outside of the function.) */	
-int 
+void 
 mlfqs_calc_recent_cpu (struct thread *t){ 	
 	int int_old_recent_cpu = &t->recent_cpu;
 	int nice = &t->nice;	
-
-	int fp_old_recent_cpu = int_to_fp(int_old_recent_cpu);
-		
 	int int_load_avg = load_avg;
+
+	int fp_old_recent_cpu = int_to_fp(int_old_recent_cpu);		
 	int fp_new_recent_cpu = ((2 * int_load_avg) / (2 * int_load_avg + 1)) * 
 						fp_old_recent_cpu + nice;
 	int int_new_recent_cpu = fp_to_int(fp_new_recent_cpu);
-	return int_new_recent_cpu;	
+
+	t->recent_cpu = int_new_recent_cpu;	
+}
+
+/* Update recent_cpu of current thread if it's not idle thread */
+void
+mlfqs_update_current_recent_cpu(void){
+	/* Check idle and update recent_cpu of current thread */
+	if (thread_current() != idle_thread){
+		struct thread *curr = thread_current();
+		curr->recent_cpu ++;
+	}
+}
+
+/* Update recent_cpu of all threads excepting idle thread. 
+(All threads = Threads in ready list, sleep list)
+*/
+void
+mlfqs_update_all_recent_cpu (void){
+	/* Check idle and update recent_cpu of current thread */
+	if (thread_current() != idle_thread){
+		struct thread *curr = thread_current();
+		mlfqs_calc_recent_cpu (curr);
+	}
+
+	/* Update recent_cpu of ready_list */
+	if (!list_empty(&ready_list)) {
+		struct list_elem *r;
+		for (r = list_begin(&ready_list); r != list_end(&ready_list); r = list_next(r)){
+			struct thread *ready_t = list_entry(r, struct thread, elem);
+			mlfqs_calc_recent_cpu (ready_t);
+		}
+	}
+
+	/* Update recent_cpu of sleep_list */
+	if (!list_empty(&sleep_list)) {
+		struct list_elem *s;
+		for (s = list_begin(&ready_list); s != list_end(&ready_list); s = list_next(s)){			
+				struct thread *sleep_t = list_entry(s, struct thread, elem);
+				mlfqs_calc_recent_cpu (sleep_t);		
+		}
+	}	
 }
 
 /* Update system load average (int) */
@@ -785,8 +827,7 @@ mlfqs_count_ready_threads (void){
 		- 100ticks 마다: recent cpu 업데이트
 			- mlfqs_count_ready_threads
 			- mlfqs_update_load_avg
-			- 모든 쓰레드 순회 (idle 제외, ready & sleep)
-			- mlfqs_calc_recent_cpu
+			- mlfqs_update_all_recent_cpu
 
 		- 4ticks 마다: priority 재계산
 			- mlfqs_calc_priority
