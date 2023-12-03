@@ -1,57 +1,89 @@
-#define F (1<<14) // 16384
-
-/* convert int(n) to fixed point */
-int int_to_fp(int n); 
-/* convert fixed point(x) to int (소수점 아래는 버림) */
-int fp_to_int(int x);
-/* convert fixed point(x) to int (반올림) */
-int fp_to_int_round(int x);
+#include <stdio.h>
 
 
-// /* Add operation between FPs (return with FP)*/
-// int add_fp(int x, int y);
-// /* subtraction operation between FPs (x-y, return with FP)*/
-// int sub_fp(int x, int y);
-// /* multiplication operation between FPs (return with FP) */
-// int multiply_fp(int x, int y);
-// /* Division operation between FPs (x/y, return with FP) */
-// int divide_fp(int x, int y);
+#define F (1 << 14)     //fixed point 1 
+#define INT_MAX ((1 << 31) - 1)
+#define INT_MIN (-(1 << 31))
+// x and y denote fixed_point numbers in 17.14 format 
+// n is an integer
 
+/* integer를 fixed point로 전환 */
+int int_to_fp(int n);          
 
-int 
-int_to_fp(int n) {
-    int fp_n = n * F;
-    return fp_n;
+/* FP를 int로 전환(반올림) */
+int fp_to_int_round(int x);     
+
+/* FP를 int로 전환(버림) */
+int fp_to_int(int x);           
+
+/* FP의 덧셈 */
+int add_fp(int x, int y);       
+
+/* FP와 int의 덧셈  */
+int add_mixed(int fp, int int_n);    
+
+/* FP의 뺄셈(x-y) */
+int sub_fp(int x, int y);     
+
+/* FP와 int의 뺄셈(x-n) */
+int sub_mixed(int x, int n);    
+
+/* FP의 곱셈 */
+int mult_fp(int x, int y);      
+
+/* FP와 int의 곱셈 */
+int mult_mixed(int x, int y);   
+
+/* FP의 나눗셈(x/y) */
+int div_fp(int x, int y);       
+
+/* FP와 int 나눗셈(x/n) */
+int div_mixed(int x, int n);    
+
+///////////////////////////////
+// 나누기는 무조건 실수 ////
+
+int int_to_fp(int n) {
+    return n * F;
 }
 
-int 
-fp_to_int(int x) {
-    int int_x = (x / F);
-    return int_x;
-};
+int fp_to_int_round(int x) {
+    if (x >= 0) return (x + F / 2) / F;
+    else return (x - F / 2) / F;
+}
 
-int 
-fp_to_int_round(int x) {
-    if (x >= 0){
-        int int_x = (x+F/2)/F ;
-        return int_x;
-    } else {
-        int int_x = (x-F/2)/F ;
-        return int_x;
-    }
-};
+int fp_to_int(int x) {
+    return x / F;
+}
 
+int add_fp(int x, int y) {
+    return x + y;
+}
 
-// /* Add operation between FPs (return with FP)*/
-// int 
-// add_fp(int x, int y) {    
-//     return add_fp;    
-// }
+int sub_fp(int x, int y) {
+    return x - y;
+}
 
+int add_mixed(int x, int n) {
+    return x + n * F;
+}
 
-// /* subtraction operation between FPs (x-y)*/
-// int sub_fp(int x, int y);
-// /* multiplication operation between FPs */
-// int multiply_fp(int x, int y);
-// /* Division operation between FPs (x/y) */
-// int divide_fp(int x, int y);
+int sub_mixed(int x, int n) {
+    return x - n * F;
+}
+
+int mult_fp(int x, int y) {
+    return ((int64_t) x) * y / F;
+}
+
+int mult_mixed(int x, int n) {
+    return x * n;
+}
+
+int div_fp(int x, int y) {
+    return ((int64_t) x) * F / y;
+}
+
+int div_mixed(int x, int n) {
+    return x / n;
+}  
