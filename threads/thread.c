@@ -819,7 +819,7 @@ mlfqs_update_all_recent_cpu (void){
 		struct list_elem *r;
 		for (r = list_begin(&ready_list); r != list_end(&ready_list); r = list_next(r)){			
 			struct thread *ready_t = list_entry(r, struct thread, elem);
-			mlfqs_calc_recent_cpu (ready_t);
+			mlfqs_calc_recent_cpu (ready_t);			
 		}
 	}
 
@@ -845,11 +845,10 @@ mlfqs_calc_recent_cpu (struct thread *t){
 	int int_nice = t->nice;	
 	int fp_load_avg = load_avg;	
 
-	int fp_decay = div_fp((mult_mixed(fp_load_avg, 2)), (add_mixed(mult_mixed(fp_load_avg, 2), 1)));	
+	int fp_decay = div_fp((fp_load_avg * 2), (add_mixed(fp_load_avg * 2, 1)));	
 	int fp_new_recent_cpu = add_mixed(mult_fp(fp_decay, fp_old_recent_cpu), int_nice);
 	t->recent_cpu = fp_new_recent_cpu;
 }
-
 
 
 /* Recalculate priority of all threads excepting idle thread */
@@ -863,12 +862,12 @@ mlfqs_update_all_priority (void){
 		int int_nice = curr->nice;
 		int fp_nice = int_to_fp(int_nice);
 
-		int fp_new_priority = sub_fp(sub_fp(int_to_fp(PRI_MAX), div_mixed(fp_recent_cpu, 4)), mult_mixed(fp_nice, 2));
+		int fp_new_priority =int_to_fp(PRI_MAX) - (fp_recent_cpu/4) - fp_nice * 2;
 		int int_new_priority = fp_to_int(fp_new_priority);
 
 		curr->priority = int_new_priority;
 
-		priority_check(curr);
+		protect_priority(curr);
 	}
 
 	/* Update recent_cpu of ready_list */
@@ -881,11 +880,11 @@ mlfqs_update_all_priority (void){
 			int int_nice = ready_t->nice;
 			int fp_nice = int_to_fp(int_nice);
 
-			int fp_new_priority = sub_fp(sub_fp(int_to_fp(PRI_MAX), div_mixed(fp_recent_cpu, 4)), mult_mixed(fp_nice, 2));
+			int fp_new_priority = int_to_fp(PRI_MAX) - (fp_recent_cpu/4) - fp_nice * 2;
 			int int_new_priority = fp_to_int_round(fp_new_priority);
 
 			ready_t->priority = int_new_priority;
-			priority_check(ready_t);
+			protect_priority(ready_t);
 		}
 	}
 
@@ -899,11 +898,11 @@ mlfqs_update_all_priority (void){
 				int int_nice = sleep_t->nice;
 				int fp_nice = int_to_fp(int_nice);
 
-				int fp_new_priority = sub_fp(sub_fp(int_to_fp(PRI_MAX), div_mixed(fp_recent_cpu, 4)), mult_mixed(fp_nice, 2));
+				int fp_new_priority = int_to_fp(PRI_MAX) - (fp_recent_cpu/4) - fp_nice * 2;
 				int int_new_priority = fp_to_int_round(fp_new_priority);
 
 				sleep_t->priority = int_new_priority;	
-				priority_check(sleep_t);
+				protect_priority(sleep_t);
 		}
 	}	
 
@@ -913,7 +912,7 @@ mlfqs_update_all_priority (void){
 
 /* Prevents priority from going out of range. */
 void
-priority_check(struct thread *t) {
+protect_priority(struct thread *t) {
 	if (t->priority > PRI_MAX){
 		t->priority = PRI_MAX;
 	}

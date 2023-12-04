@@ -95,6 +95,16 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
+	/* Priority Scheduling - Donation */
+	struct lock *waiting_lock;
+	struct list having_locks;
+	int base_priority;
+
+	/* Advanced Priority Scheduling - MLFQ (4.4 BSD) */
+	int recent_cpu; // fixed point
+	int nice;
+
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -143,11 +153,22 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
-///////////////// [project1-A] ////////////////////////////
+/* Project1. Alarm Clock */
 static struct list sleep_list;
 void sleep_thread(int64_t waiting_time);
 void awake_thread(int64_t ticks);
-//////////////////////////////////////////////////////////
 
+/* Project1. Thread - Priority */
+bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
+void thread_switch(void);
+
+/* Project1. Thread - Advanced Priority (MLFQS) */
+void mlfqs_update_all_priority (void);
+void mlfqs_calc_recent_cpu (struct thread *t);
+void mlfqs_increment_current_recent_cpu(void); 
+void mlfqs_update_all_recent_cpu (void);
+void mlfqs_update_load_avg (int ready_threads);
+int mlfqs_count_ready_threads (void);
+void protect_priority(struct thread *t);
 
 #endif /* threads/thread.h */

@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "palloc.h": "c",
-        "list.h": "c"
+        "list.h": "c",
+        "thread.h": "c",
+        "intr-stubs.h": "c"
     }
 }

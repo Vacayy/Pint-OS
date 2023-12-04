@@ -133,10 +133,27 @@ timer_print_stats (void) {
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
-	ticks++;
-	awake_thread(ticks);
+	ticks++;		
+
+	if (thread_mlfqs){	
+		/* Update recent_cpu and priority */
+		mlfqs_increment_current_recent_cpu();
+
+		if (timer_ticks() % TIMER_FREQ == 0){			
+			int ready_threads = mlfqs_count_ready_threads();			
+			mlfqs_update_load_avg(ready_threads);
+			mlfqs_update_all_recent_cpu();
+		}
+
+		if (timer_ticks() % 4 == 0){
+			mlfqs_update_all_priority();
+		}
+	}	
+
+	awake_thread(ticks);	
 	thread_tick ();
 }
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
