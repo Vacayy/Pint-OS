@@ -745,7 +745,30 @@ allocate_tid (void) {
 
 	return tid;
 }
-  
+
+
+void 
+check_running_priority (void){
+	enum intr_level old_level;
+	
+	if (list_empty(&ready_list) == true || thread_current() == idle_thread)
+		return;
+
+	old_level = intr_disable ();
+	struct thread *curr = running_thread();
+	list_sort(&ready_list, cmp_priority, NULL);
+
+	struct thread *ready_head = list_entry(list_begin(&ready_list),struct thread,elem);
+	
+	if(curr->priority < ready_head->priority && ready_head != idle_thread) {
+		list_insert_ordered(&ready_list, &curr->elem, cmp_priority, NULL);
+		curr->status = THREAD_READY;
+		schedule();
+	}
+	intr_set_level (old_level);
+}
+
+
 /* Functions for implementing advanced scheduling */
 
 /* Update recent_cpu of current thread if it's not idle thread */

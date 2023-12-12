@@ -202,9 +202,10 @@ process_exec (void *f_name) {
 	*/
 	success = load (file_name, &_if);
 
+	palloc_free_page (file_name);
+	
 	/* If load failed, quit. */
 	if (!success){
-		palloc_free_page (file_name);
 		return -1;
 	}
 
@@ -271,7 +272,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	for (int i = 0; i < 100000000; i++){}
+	for (int i = 0; i < 1000000000; i++){}
 
 	return -1;
 }
@@ -485,11 +486,6 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-
-	// char *token, *save_ptr;
-	// for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
-	// 	printf("'%s'\n", token);
-	// };
 	
 	success = true;
 

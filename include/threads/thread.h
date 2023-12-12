@@ -105,6 +105,7 @@ struct thread {
 	int nice;
 
 	/* [Project 2] */
+	
 
 
 #ifdef USERPROG
@@ -163,6 +164,7 @@ void awake_thread(int64_t ticks);
 /* Project1. Thread - Priority */
 bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
 void thread_switch(void);
+void check_running_priority(void);
 
 /* Project1. Thread - Advanced Priority (MLFQS) */
 void mlfqs_update_all_priority (void);

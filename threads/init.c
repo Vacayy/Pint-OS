@@ -116,16 +116,16 @@ main (void) {
 	vm_init ();
 #endif
 
-	printf ("Boot complete.\n");
+	printf ("Boot complete.\n"); // 부팅 완료
 
 	/* Run actions specified on kernel command line. */
-	run_actions (argv);
+	run_actions (argv); // 작업 수행
 
 	/* Finish up. */
 	if (power_off_when_done)
-		power_off ();
+		power_off (); // 컴퓨터 종료
 	thread_exit ();
-}
+} // PintOS bye bye~
 
 /* Clear BSS */
 static void
