@@ -286,6 +286,7 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	printf ("%s: exit(%d)\n", curr->name, 123); // 테스트..
 
 	process_cleanup ();
 }

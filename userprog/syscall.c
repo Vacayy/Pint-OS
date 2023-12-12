@@ -38,9 +38,31 @@ syscall_init (void) {
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
 
+/* System Call functions */
 void
 halt (void) {
 	power_off();
+}
+
+void
+exit (int status) {
+	struct thread *curr = thread_current();
+
+	curr -> exit_status = status;
+	thread_exit();
+}
+
+bool 
+create(const char *file, unsigned initial_size)
+{
+	check_address(file);
+	return filesys_create(file, initial_size);
+}
+
+bool remove(const char *file)
+{
+	check_address(file);
+	return filesys_remove(file);
 }
 
 void 
@@ -67,7 +89,19 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	case SYS_HALT:
 		halt(); 
 		break;
+
+	case SYS_EXIT:
+		exit(f->R.rdi);
+		break;
 	
+	case SYS_CREATE:
+		create(f->R.rdi, f->R.rsi);
+		break;
+
+	case SYS_REMOVE:
+		remove(f->R.rdi);
+		break;
+
 	// case SYS_OPEN:
 	// 	// f->R.rax = open(f->R.rdi); 
 	// 	break;
