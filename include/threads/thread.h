@@ -95,14 +95,16 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
-	/* Priority Scheduling - Donation */
+	/* [Project 1] Priority Scheduling - Donation */
 	struct lock *waiting_lock;
 	struct list having_locks;
 	int base_priority;
 
-	/* Advanced Priority Scheduling - MLFQ (4.4 BSD) */
+	/* [Project 1] Advanced Priority Scheduling - MLFQ (4.4 BSD) */
 	int recent_cpu; // fixed point
 	int nice;
+
+	/* [Project 2] */
 
 
 #ifdef USERPROG
