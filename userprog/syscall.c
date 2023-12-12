@@ -10,6 +10,7 @@
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+void check_address (void *addr);
 
 /* System call.
  *
@@ -37,10 +38,43 @@ syscall_init (void) {
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
 
+void
+halt (void) {
+	power_off();
+}
+
+void 
+check_address(void *addr) {
+	if (addr == NULL) {
+		exit(-1);
+	}
+
+	if (!is_user_vaddr (addr)) {
+		exit(-1);
+	}
+
+	if (pml4_get_page(thread_current()->pml4, addr) == NULL){
+		exit(-1);
+	}
+}
+
 /* The main system call interface */
 void
-syscall_handler (struct intr_frame *f UNUSED) {
-	// TODO: Your implementation goes here.
-	printf ("system call!\n");
+syscall_handler (struct intr_frame *f UNUSED) {		
+	int syscall_n = f->R.rax; /* syscall number */
+	switch (syscall_n)
+	{	
+	case SYS_HALT:
+		halt(); 
+		break;
+	
+	// case SYS_OPEN:
+	// 	// f->R.rax = open(f->R.rdi); 
+	// 	break;
+	
+	default:
+		printf ("system call!\n");
+		break;
+	}
 	thread_exit ();
 }

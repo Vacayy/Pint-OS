@@ -5,6 +5,7 @@
         "thread.h": "c",
         "intr-stubs.h": "c",
         "*.inc": "cpp",
-        "string.h": "c"
+        "string.h": "c",
+        "syscall.h": "c"
     }
 }

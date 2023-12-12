@@ -12,24 +12,17 @@ Formatting file system...done.
 Boot complete.
 Putting 'lg-seq-block' into the file system...
 Executing 'lg-seq-block':
-Page fault at 0x4747efff: not present error writing page in kernel context.
-Interrupt 0x0e (#PF Page-Fault Exception) at rip=800421c457
- cr2=000000004747efff error=               2
-rax 000000004747efff rbx 0000000000000000 rcx 000000800421c3d0 rdx 00000000000000cc
-rsp 000000800423fc60 rbp 000000800423fca0 rsi 0000000000000001 rdi 000000800423e000
-rip 000000800421c457 r8 0000000000014000  r9 0000000000000001 r10 0000000000004000
-r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
-r15 0000000000000000 rflags 00000202
-es: 0010 ds: 0010 cs: 0008 ss: 0010
-Kernel PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x800421897a 0x800421d1f7 0x800421d376 0x80042097a5 0x8004209bc3 0x800421c32a 0x800421bfd6 0x8004207934.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 71 ticks
-Thread: 30 idle ticks, 36 kernel ticks, 5 user ticks
+000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
+000000004747ffe0  f3 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
+000000004747fff0  00 00 00 6c 67 2d 73 65-71 2d 62 6c 6f 63 6b 00 |...lg-seq-block.|
+system call!
+Execution of 'lg-seq-block' complete.
+Timer: 676 ticks
+Thread: 30 idle ticks, 644 kernel ticks, 3 user ticks
 hd0:0: 0 reads, 0 writes
 hd0:1: 81 reads, 242 writes
 hd1:0: 107 reads, 0 writes
-Console: 1725 characters output
-Key
+Console: 1072 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

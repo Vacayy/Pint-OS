@@ -3,4 +3,7 @@
 
 void syscall_init (void);
 
+void halt (void);
+int open (const char *file);
+
 #endif /* userprog/syscall.h */

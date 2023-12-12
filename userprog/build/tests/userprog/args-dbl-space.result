@@ -1,12 +1,27 @@
 FAIL
-Kernel panic in run: PANIC at ../../userprog/exception.c:97 in kill(): Kernel bug - unexpected interrupt in kernel
-Call stack: 0x800421897a 0x800421d1f7 0x800421d376 0x80042097a5 0x8004209bc3 0x800421c32a 0x800421bfd6 0x8004207934
-Translation of call stack:
-0x000000800421897a: debug_panic (lib/kernel/debug.c:32)
-0x000000800421d1f7: kill (userprog/exception.c:103)
-0x000000800421d376: page_fault (userprog/exception.c:159 (discriminator 12))
-0x00000080042097a5: intr_handler (threads/interrupt.c:356)
-0x0000008004209bc3: intr_entry (threads/intr-stubs.o:?)
-0x000000800421c32a: process_exec (userprog/process.c:214)
-0x000000800421bfd6: initd (userprog/process.c:75)
-0x0000008004207934: kernel_thread (threads/thread.c:542)
+Test output failed to match any acceptable form.
+
+Acceptable output:
+  (args) begin
+  (args) argc = 3
+  (args) argv[0] = 'args-dbl-space'
+  (args) argv[1] = 'two'
+  (args) argv[2] = 'spaces!'
+  (args) argv[3] = null
+  (args) end
+  args-dbl-space: exit(0)
+Differences in `diff -u' format:
+- (args) begin
+- (args) argc = 3
+- (args) argv[0] = 'args-dbl-space'
+- (args) argv[1] = 'two'
+- (args) argv[2] = 'spaces!'
+- (args) argv[3] = null
+- (args) end
+- args-dbl-space: exit(0)
++ 000000004747ffb0                          00 00 00 00 00 00 00 00 |        ........|
++ 000000004747ffc0  e5 ff 47 47 00 00 00 00-f4 ff 47 47 00 00 00 00 |..GG......GG....|
++ 000000004747ffd0  f8 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
++ 000000004747ffe0  00 00 00 00 00 61 72 67-73 2d 64 62 6c 2d 73 70 |.....args-dbl-sp|
++ 000000004747fff0  61 63 65 00 74 77 6f 00-73 70 61 63 65 73 21 00 |ace.two.spaces!.|
++ system call!
