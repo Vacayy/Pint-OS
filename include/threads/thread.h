@@ -105,6 +105,7 @@ struct thread {
 	int nice;
 
 	/* [Project 2] */
+	int exit_status;
 	
 
 
