@@ -202,17 +202,18 @@ process_exec (void *f_name) {
 	*/
 	success = load (file_name, &_if);
 
-	palloc_free_page (file_name);
 	
 	/* If load failed, quit. */
 	if (!success){
+		palloc_free_page (file_name);
 		return -1;
 	}
 
 	/* Argument Passing */
 	argument_stack(parse, count, &_if.rsp); // 함수 내부에서 parse와 rsp 값을 직접 변경하기 위해 주소 전달
 	_if.R.rdi = count; // argument1: 총 인자 개수 전달
-	_if.R.rsi = (char *)_if.rsp + 8; // argument2 저장. 정렬 패딩 조정
+	// _if.R.rsi = (char *)_if.rsp + 8; // argument2 저장. 정렬 패딩 조정
+	_if.R.rsi = parse[0]; // argument2 저장. 정렬 패딩 조정
 
 	hex_dump(_if.rsp, _if.rsp, USER_STACK-(uint64_t)_if.rsp, true); // user stack을 16진수로 프린트하기
 	
