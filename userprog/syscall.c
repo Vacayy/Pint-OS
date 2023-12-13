@@ -102,6 +102,37 @@ seek(int fd, unsigned position){
 	file_seek(file, position);
 }
 
+unsigned 
+tell(int fd){
+	if (fd < 2){
+		return;
+	}
+	
+	struct file *file = process_get_file(fd);
+
+	if (file == NULL){
+		return;
+	}
+	
+	return file_tell(file);
+}
+
+void 
+close(int fd){
+	if (fd < 2){
+		return;		
+	}	
+
+	struct file *file = process_get_file(fd);
+	
+	if (file == NULL){
+		return;
+	}
+
+	file_close(file);
+	process_close_file(fd);
+}
+
 void 
 check_address(void *addr) {
 	if (addr == NULL) {

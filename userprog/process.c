@@ -681,6 +681,17 @@ struct file
 	return fdt[fd];
 }
 
+void 
+process_close_file(int fd){
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
+	if (fd < 0 || fd > 127){
+		return NULL;
+	}
+
+	fdt[fd] = NULL;
+}
+
 #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
