@@ -565,6 +565,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	/* MLFQ 필드 초기화 */
 	t->nice = 0;
 	t->recent_cpu = 0;
+
+	t->exit_status = 0;
+	t->next_fd = 2;
 	
 }
 

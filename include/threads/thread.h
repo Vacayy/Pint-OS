@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -106,6 +107,8 @@ struct thread {
 
 	/* [Project 2] */
 	int exit_status;
+	struct file **fdt;
+	int next_fd;
 	
 
 

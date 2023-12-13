@@ -8,6 +8,10 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 
+#include "userprog/process.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 void check_address (void *addr);
@@ -47,7 +51,7 @@ halt (void) {
 void
 exit (int status) {
 	struct thread *curr = thread_current();
-
+	printf("%s: exit(%d)\n", curr->name, status);
 	curr -> exit_status = status;
 	thread_exit();
 }
@@ -59,12 +63,26 @@ create(const char *file, unsigned initial_size)
 	return filesys_create(file, initial_size);
 }
 
-
 bool 
 remove(const char *file)
 {
 	check_address(file);
 	return filesys_remove(file);
+}
+
+int 
+open(const char *file)
+{
+	check_address(file);
+	struct file *opend_file = filesys_open(file);
+	if (opend_file == NULL)
+		return -1;
+
+	int fd = process_add_file(opend_file);
+	if (fd == -1)
+		file_close(opend_file);
+
+	return fd;
 }
 
 void 
@@ -102,6 +120,14 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	case SYS_REMOVE:
 		remove(f->R.rdi);
+		break;
+
+	case SYS_EXEC:
+		//
+		break;
+
+	case SYS_WAIT:
+		//
 		break;
 
 	// case SYS_OPEN:

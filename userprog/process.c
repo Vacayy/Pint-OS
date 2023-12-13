@@ -623,6 +623,7 @@ setup_stack (struct intr_frame *if_) {
 	return success;
 }
 
+
 /* Adds a mapping from user virtual address UPAGE to kernel
  * virtual address KPAGE to the page table.
  * If WRITABLE is true, the user process may modify the page;
@@ -641,6 +642,31 @@ install_page (void *upage, void *kpage, bool writable) {
 	return (pml4_get_page (t->pml4, upage) == NULL
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
+
+// 파일 객체에 대한 파일 디스크립터를 생성하는 함수
+int 
+process_add_file(struct file *f) {
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
+	int next_fd = curr->next_fd;
+
+	/* 파일 객체를 파일 디스크립터 테이블에 추가 */
+	while (next_fd < 128 && fdt[next_fd]){ // 빈자리 탐색
+		next_fd++;
+	}
+	if (next_fd >= 128){
+		return -1;
+	}
+	
+	fdt[next_fd] = f;
+
+	/* 파일 디스크립터의 최대값 1 증가 */
+	curr->next_fd = next_fd + 1;
+
+	/* 파일 디스크립터 리턴 */
+	return next_fd;
+}
+
 #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
