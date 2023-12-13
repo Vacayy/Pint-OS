@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "userprog/syscall.h"
 #ifdef VM
 #include "vm/vm.h"
 #include "userprog/syscall.h"
@@ -195,13 +196,14 @@ __do_fork (void *aux) {
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
+	if (parent->next_fd == FDT_COUNT_LIMIT) {
+		goto error;
+	}
 
-	// FDT 복사
-	for (int i = 0; i < FDT_COUNT_LIMIT; i++){
+	for (int i = 0; i < FDT_COUNT_LIMIT; i++) {
 		struct file *file = parent->fdt[i];
-		if (file == NULL){
-			continue;
-		} if (file > 2){
+		if (file == NULL) continue;
+		if (file > 2) {
 			file = file_duplicate(file);
 		}
 		current->fdt[i] = file;		
@@ -225,7 +227,9 @@ error:
  * Returns -1 on fail. */
 int
 process_exec (void *f_name) {
-	char *file_name = f_name;
+	// char *file_name = f_name;
+	char *file_name = (char *)palloc_get_page(PAL_ZERO);
+	strlcpy(file_name, (char *)f_name, strlen(f_name) + 1);
 	bool success;
 
 	/* We cannot use the intr_frame in the thread structure.
@@ -257,9 +261,9 @@ process_exec (void *f_name) {
 		user stack의 top 포인터 초기화 (if_.rsp)
 		위 과정을 성공하면 실행 유지, 실패하면 스레드 종료
 	*/
-	lock_acquire(&filesys_lock);
+	// lock_acquire(&filesys_lock);
 	success = load (file_name, &_if);
-	lock_rlease(&filesys_lock);
+	// lock_release(&filesys_lock);
 
 	
 	/* If load failed, quit. */
@@ -331,7 +335,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	struct thread *child = get_cild_process(child_tid);
+	struct thread *child = get_child_process(child_tid);
 	if (child == NULL){ // 자식이 아니면 -1 반환
 		return -1;
 	}
@@ -340,10 +344,11 @@ process_wait (tid_t child_tid UNUSED) {
 	sema_down(&child->wait_sema);
 	// 자식이 종료됨을 알리는 `wait_sema` signal을 받으면 현재 스레드(부모)의 자식 리스트에서 제거한다.
 	list_remove(&child->child_elem);
+	int status = child->exit_status;
 	// 자식이 완전히 종료되고 스케줄링이 이어질 수 있도록 자식에게 signal을 보낸다.
 	sema_up(&child->exit_sema);
 
-	return child->exit_status; // 자식의 exit_status를 반환한다.
+	return status; // 자식의 exit_status를 반환한다.
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -361,8 +366,8 @@ process_exit (void) {
 			close(i);
 		}
 	}
-		palloc_free_multiple(curr->fdt. FDT_PAGES);
-		file_close(curr->running); // 현재 실행 중인 파일도 닫는다.
+	palloc_free_multiple(curr->fdt, FDT_PAGES);
+	file_close(curr->running); // 현재 실행 중인 파일도 닫는다.
 	process_cleanup ();
 
 	// 자식이 종료될 대까지 대기하고 있는 부모에게 signal을 보낸다.
@@ -488,11 +493,16 @@ load (const char *file_name, struct intr_frame *if_) {
 	process_activate (thread_current ());
 
 	/* Open executable file. */
+	lock_acquire(&filesys_lock);
 	file = filesys_open (file_name);
+	lock_release(&filesys_lock);
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
 		goto done;
 	}
+
+	// t->running = file;
+	// file_deny_write(file);
 
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -800,11 +810,11 @@ setup_stack (struct intr_frame *if_) {
 
 
 // 파일 객체에 대한 파일 디스크립터를 생성하는 함수
+// FDT에 fd 추가
 int 
 process_add_file(struct file *f) {
 	struct thread *curr = thread_current();
 	struct file **fdt = curr->fdt;
-
 
 	// limit을 넘지 않는 범위 안에서 빈 자리 탐색
 	while (curr->next_fd < FDT_COUNT_LIMIT && fdt[curr->next_fd])
@@ -833,7 +843,7 @@ void
 process_close_file(int fd){
 	struct thread *curr = thread_current();
 	struct file **fdt = curr->fdt;
-	if (fd < 0 || fd > 127){
+	if (fd < 2 || fd >= FDT_COUNT_LIMIT){
 		return NULL;
 	}
 

@@ -9,6 +9,11 @@
         "syscall.h": "c",
         "filesys.h": "c",
         "file.h": "c",
-        "process.h": "c"
+        "process.h": "c",
+        "interrupt.h": "c",
+        "init.h": "c",
+        "directory.h": "c",
+        "synch.h": "c",
+        "vaddr.h": "c"
     }
 }

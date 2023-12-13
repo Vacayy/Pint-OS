@@ -1,4 +1,3 @@
-#include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -15,6 +14,8 @@
 #include "devices/input.h"
 #include "lib/kernel/stdio.h"
 
+#include "userprog/syscall.h"
+
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
@@ -30,20 +31,23 @@ void syscall_handler (struct intr_frame *);
 #define MSR_STAR 0xc0000081         /* Segment selector msr */
 #define MSR_LSTAR 0xc0000082        /* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
+// struct lock filesys_lock;
 
-void
-syscall_init (void) {
-	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
-			((uint64_t)SEL_KCSEG) << 32);
-	write_msr(MSR_LSTAR, (uint64_t) syscall_entry);
 
-	/* The interrupt service rountine should not serve any interrupts
-	 * until the syscall_entry swaps the userland stack to the kernel
-	 * mode stack. Therefore, we masked the FLAG_FL. */
-	write_msr(MSR_SYSCALL_MASK,
-			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
-	
-	lock_init(&filesys_lock);
+
+void 
+check_address(void *addr){
+	if (addr == NULL) {
+		exit(-1);
+	}
+
+	if (!is_user_vaddr (addr)) {
+		exit(-1);
+	}
+
+	// if (pml4_get_page(thread_current()->pml4, addr) == NULL){
+	// 	exit(-1);
+	// }
 }
 
 /* System Call functions */
@@ -74,15 +78,19 @@ remove(const char *file) {
 
 int 
 open(const char *file) {
-	check_address(file);
-	struct file *opend_file = filesys_open(file);
+	check_address(file);		
+
+	lock_acquire(&filesys_lock);
+	struct file *opend_file = filesys_open(file);	
+	lock_release(&filesys_lock);
+
 	if (opend_file == NULL)
 		return -1;
-
+	
 	int fd = process_add_file(opend_file);
 	if (fd == -1)
 		file_close(opend_file);
-
+	
 	return fd;
 }
 
@@ -144,35 +152,31 @@ read (int fd, void *buffer, unsigned size) {
 
 	char *ptr = (char *)buffer;
 	int bytes_read = 0;
+	
 
 	if (fd == 0){ // STDIN_FILENO
 		for (int i = 0; i < size; i++){
-			char ch = input_getc();
-			if (ch == '\n'){
-				break;
-			}
-			*ptr = ch;
-			ptr ++;
+			*ptr++ = input_getc();
 			bytes_read++;
 		}
+	} else if (fd == 1) {
+		return -1;
 	} else {
 		if (fd < 2){
 			return -1;
 		}
-		
 		struct file *file = process_get_file(fd);
-		
 		if (file == NULL){
 			return -1;
-		}
-
+		}			
 		lock_acquire(&filesys_lock);
 		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);
 	}
-
+	
 	return bytes_read;
 }
+
 
 int 
 write (int fd, const void *buffer, unsigned size){
@@ -195,75 +199,118 @@ write (int fd, const void *buffer, unsigned size){
 		bytes_write = file_write(file, buffer, size);
 		lock_release(&filesys_lock);
 	}
+	
 	return bytes_write;
 }
 
-void 
-check_address(void *addr) {
-	if (addr == NULL) {
-		exit(-1);
-	}
-
-	if (!is_user_vaddr (addr)) {
-		exit(-1);
-	}
-
-	if (pml4_get_page(thread_current()->pml4, addr) == NULL){
-		exit(-1);
-	}
+tid_t 
+fork(const char *thread_name, struct intr_frame *f)
+{
+	return process_fork(thread_name, f);
 }
+
+int 
+exec(const char *cmd_line)
+{
+	check_address(cmd_line);
+
+	// process.c 파일의 process_create_initd 함수와 유사하다.
+	// 단, 스레드를 새로 생성하는 건 fork에서 수행하므로
+	// 이 함수에서는 새 스레드를 생성하지 않고 process_exec을 호출한다.
+
+	// process_exec 함수 안에서 filename을 변경해야 하므로
+	// 커널 메모리 공간에 cmd_line의 복사본을 만든다.
+	// (현재는 const char* 형식이기 때문에 수정할 수 없다.)
+	
+	// printf("%s \n", cmd_line);
+	// char *cmd_line_copy;
+	// cmd_line_copy = palloc_get_page(0);
+	// if (cmd_line_copy == NULL)
+	// 	exit(-1);							  // 메모리 할당 실패 시 status -1로 종료한다.
+	// strlcpy(cmd_line_copy, cmd_line, PGSIZE); // cmd_line을 복사한다.
+
+	// printf("%s \n", cmd_line_copy);
+
+	// 스레드의 이름을 변경하지 않고 바로 실행한다.
+	// if (process_exec(cmd_line_copy) == -1)
+	if (process_exec(cmd_line) == -1)
+		exit(-1); // 실패 시 status -1로 종료한다.
+}
+
+int wait(int pid)
+{
+	return process_wait(pid);
+}
+
+
+void
+syscall_init (void) {
+	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
+			((uint64_t)SEL_KCSEG) << 32);
+	write_msr(MSR_LSTAR, (uint64_t) syscall_entry);
+
+	/* The interrupt service rountine should not serve any interrupts
+	 * until the syscall_entry swaps the userland stack to the kernel
+	 * mode stack. Therefore, we masked the FLAG_FL. */
+	write_msr(MSR_SYSCALL_MASK,
+			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+	
+	lock_init(&filesys_lock);
+}
+
 
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {		
 	int syscall_n = f->R.rax; /* syscall number */
+#ifdef VM
+	thread_current()->rsp = f->rsp;
+#endif
 	switch (syscall_n)
 	{	
 	case SYS_HALT:
-		halt(); 
-
+		halt();
+		break;
 	case SYS_EXIT:
 		exit(f->R.rdi);
-	
+		break;
+	case SYS_FORK:
+		f->R.rax = fork(f->R.rdi, f);
+		break;
+	case SYS_EXEC:
+		f->R.rax = exec(f->R.rdi);
+		break;
+	case SYS_WAIT:
+		f->R.rax = wait(f->R.rdi);
+		break;
 	case SYS_CREATE:
-		create(f->R.rdi, f->R.rsi);
-
+		f->R.rax = create(f->R.rdi, f->R.rsi);
+		break;
 	case SYS_REMOVE:
-		remove(f->R.rdi);
-
+		f->R.rax = remove(f->R.rdi);
+		break;
 	case SYS_OPEN:
-		open(f->R.rdi); 
-	
+		f->R.rax = open(f->R.rdi);
+		break;
 	case SYS_FILESIZE:
-		filesize(f->R.rdi); 
-
+		f->R.rax = filesize(f->R.rdi);
+		break;
+	case SYS_READ:
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_WRITE:
+		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
 	case SYS_SEEK:
 		seek(f->R.rdi, f->R.rsi);
-
+		break;
 	case SYS_TELL:
-		tell(f->R.rdi);
-
+		f->R.rax = tell(f->R.rdi);
+		break;
 	case SYS_CLOSE:
 		close(f->R.rdi);
-
-	case SYS_READ:
-		read(f->R.rdi, f->R.rsi, f->R.rdx);
-
-	case SYS_WRITE:
-		write(f->R.rdi, f->R.rsi, f->R.rdx);
-	
-	// case SYS_EXEC:
-	// 	exec(f->R.rdi);		
-
-	// case SYS_WAIT:
-	// 	wait(f->R.rdi);		
-
-	// case SYS_FORK:
-	// 	fork(f->R.rdi);
-
-	default:
-		printf ("system call!\n");
 		break;
-	}
-	thread_exit ();
+	default:		
+		exit(-1);
+	}	
 }
