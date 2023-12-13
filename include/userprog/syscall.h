@@ -19,6 +19,7 @@ void close(int fd);
 int fork(const char *thread_name);
 int exec(const char *file);
 int wait(int pid);
+int read (int fd, void *buffer, unsigned size);
 
 void check_address (void *addr);
 
