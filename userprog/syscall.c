@@ -91,6 +91,18 @@ filesize(int fd) {
 }
 
 void 
+seek(int fd, unsigned position){
+	if (fd < 2){
+		return;
+	}
+	struct file *file = process_get_file(fd);
+	if (file == NULL){
+		return;
+	}
+	file_seek(file, position);
+}
+
+void 
 check_address(void *addr) {
 	if (addr == NULL) {
 		exit(-1);
@@ -133,6 +145,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	
 	case SYS_FILESIZE:
 		filesize(f->R.rdi); 
+		break;
+
+	case SYS_SEEK:
+		seek(f->R.rdi, f->R.rsi);
 		break;
 
 	case SYS_EXEC:
