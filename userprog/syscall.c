@@ -85,6 +85,15 @@ open(const char *file)
 	return fd;
 }
 
+int 
+filesize(int fd) {
+	struct file *file = process_get_file(fd);
+	if (file == NULL){
+		return -1;
+	}
+	return file_length(file);
+}
+
 void 
 check_address(void *addr) {
 	if (addr == NULL) {
@@ -122,6 +131,14 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		remove(f->R.rdi);
 		break;
 
+	case SYS_OPEN:
+		open(f->R.rdi); 
+		break;
+	
+	case SYS_FILESIZE:
+		filesize(f->R.rdi); 
+		break;
+
 	case SYS_EXEC:
 		//
 		break;
@@ -130,9 +147,6 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		//
 		break;
 
-	// case SYS_OPEN:
-	// 	// f->R.rax = open(f->R.rdi); 
-	// 	break;
 	
 	default:
 		printf ("system call!\n");
