@@ -668,15 +668,17 @@ process_add_file(struct file *f) {
 }
 
 // 파일 객체를 검색하는 함수
-struct 
-file *process_get_file(int fd) {
+struct file 
+*process_get_file(int fd) {
 	struct thread *curr = thread_current();
 	struct file **fdt = curr->fdt;
+	
+	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
 	if (fd < 0 || fd > 127)
 		return NULL;
-	return fdt[fd];
-	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
+	
 	/* 없을 시 NULL 리턴 */
+	return fdt[fd];
 }
 
 #else

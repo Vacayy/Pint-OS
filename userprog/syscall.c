@@ -14,7 +14,6 @@
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
-void check_address (void *addr);
 
 /* System call.
  *
@@ -57,22 +56,19 @@ exit (int status) {
 }
 
 bool 
-create(const char *file, unsigned initial_size)
-{
+create(const char *file, unsigned initial_size) {
 	check_address(file);
 	return filesys_create(file, initial_size);
 }
 
 bool 
-remove(const char *file)
-{
+remove(const char *file) {
 	check_address(file);
 	return filesys_remove(file);
 }
 
 int 
-open(const char *file)
-{
+open(const char *file) {
 	check_address(file);
 	struct file *opend_file = filesys_open(file);
 	if (opend_file == NULL)
