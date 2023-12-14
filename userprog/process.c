@@ -344,6 +344,7 @@ process_wait (tid_t child_tid UNUSED) {
 	sema_down(&child->wait_sema);
 	// 자식이 종료됨을 알리는 `wait_sema` signal을 받으면 현재 스레드(부모)의 자식 리스트에서 제거한다.
 	list_remove(&child->child_elem);
+	
 	int status = child->exit_status;
 	// 자식이 완전히 종료되고 스케줄링이 이어질 수 있도록 자식에게 signal을 보낸다.
 	sema_up(&child->exit_sema);
@@ -854,8 +855,8 @@ process_close_file(int fd){
 struct 
 thread *get_child_process(int pid){
 	/* 자식 리스트에 접근하여 프로세스 디스크립터 검색 */
-	struct thread *cur = thread_current();
-	struct list *child_list = &cur->child_list;
+	struct thread *curr = thread_current();
+	struct list *child_list = &curr->child_list;
 	for (struct list_elem *e = list_begin(child_list); e != list_end(child_list); e = list_next(e))
 	{
 		struct thread *t = list_entry(e, struct thread, child_elem);

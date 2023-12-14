@@ -5,7 +5,7 @@
 #define USERPROG_SYSCALL_H
 
 void syscall_init (void);
-struct lock filesys_lock;
+struct lock filesys_lock; // 파일 시스템 잠금
 
 void halt(void);
 void exit(int status);

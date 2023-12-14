@@ -34,7 +34,7 @@ void syscall_handler (struct intr_frame *);
 // struct lock filesys_lock;
 
 
-
+/* 해당 주소가 NULL인지, 유저 영역에서 벗어났는지 여부 체크 */
 void 
 check_address(void *addr){
 	if (addr == NULL) {
@@ -80,9 +80,9 @@ int
 open(const char *file) {
 	check_address(file);		
 
-	lock_acquire(&filesys_lock);
+	// lock_acquire(&filesys_lock);
 	struct file *opend_file = filesys_open(file);	
-	lock_release(&filesys_lock);
+	// lock_release(&filesys_lock);
 
 	if (opend_file == NULL)
 		return -1;
@@ -151,30 +151,26 @@ read (int fd, void *buffer, unsigned size) {
 	check_address(buffer);
 
 	char *ptr = (char *)buffer;
-	int bytes_read = 0;
-	
-
-	if (fd == 0){ // STDIN_FILENO
+	int bytes_read = 0; // 읽은 바이트 수 
+		
+	if (fd == 0){ // 표준 입력
 		for (int i = 0; i < size; i++){
-			*ptr++ = input_getc();
+			*ptr++ = input_getc(); // 입력을 한 문자씩 읽어 buffer에 저장
 			bytes_read++;
 		}
-	} else if (fd == 1) {
+	} else if (fd == 1) { // 표준 출력: 읽기용이 아님
 		return -1;
-	} else {
-		if (fd < 2){
-			return -1;
-		}
-		struct file *file = process_get_file(fd);
-		if (file == NULL){
+	} else { 
+		struct file *file = process_get_file(fd); // fd에 해당하는 파일 객체 가져오기
+		if (file == NULL){						
 			return -1;
 		}			
-		lock_acquire(&filesys_lock);
-		bytes_read = file_read(file, buffer, size);
+		lock_acquire(&filesys_lock); 
+		bytes_read = file_read(file, buffer, size); // 데이터 읽기
 		lock_release(&filesys_lock);
-	}
-	
-	return bytes_read;
+	}	
+
+	return bytes_read; 
 }
 
 
@@ -182,6 +178,7 @@ int
 write (int fd, const void *buffer, unsigned size){
 	check_address(buffer);
 	int bytes_write = 0;
+
 
 	if (fd == 1){ // STDOUT_FILENO
 		putbuf(buffer, size);
@@ -195,9 +192,9 @@ write (int fd, const void *buffer, unsigned size){
 			return -1;
 		}
 
-		lock_acquire(&filesys_lock);
+		// lock_acquire(&filesys_lock);
 		bytes_write = file_write(file, buffer, size);
-		lock_release(&filesys_lock);
+		// lock_release(&filesys_lock);
 	}
 	
 	return bytes_write;

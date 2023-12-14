@@ -29,7 +29,7 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-/* system call */
+/* System call */
 #define FDT_PAGES 3
 #define FDT_COUNT_LIMIT FDT_PAGES*(1 << 9)
 

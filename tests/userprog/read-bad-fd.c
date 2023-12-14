@@ -11,7 +11,7 @@ void
 test_main (void) 
 {
   char buf;
-  read (0x20101234, &buf, 1);
+  read (0x20101234, &buf, 1);   
   read (5, &buf, 1);
   read (1234, &buf, 1);
   read (-1, &buf, 1);
